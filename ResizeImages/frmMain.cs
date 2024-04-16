@@ -61,7 +61,7 @@ namespace ResizeImages
 
         void SetSizeOption(int width, int height)
         {
-            lblReduceType.Text = rdbPorcent.Checked ? "相对 % " : "绝对pixel ";
+            lblReduceType.Text = rdbPorcent.Checked ? "Dimensão % " : "Dimensão ";
             txtWidth.Text = width.ToString();
             txtHeight.Text = height.ToString();
         }
@@ -74,7 +74,7 @@ namespace ResizeImages
 
         private void rdbPorcent_CheckedChanged(object sender, EventArgs e)
         {
-            SetSizeOption(100,100);
+            SetSizeOption(90, 90);
         }
 
         private void rdbHQ_CheckedChanged(object sender, EventArgs e)
@@ -197,7 +197,7 @@ namespace ResizeImages
 
         private async void btnRun_Click(object sender, EventArgs e)
         {
-            if (btnRun.Text == "取消")
+            if (btnRun.Text == "Cancelar")
             {
                 _tokenSource.Cancel();
                 return;
@@ -216,21 +216,17 @@ namespace ResizeImages
             if (File.Exists(txtInputPath.Text))
             {
                 lblCountInputs.Text = "1";
-                // 仅选择 1 个文件
+                // Apenas 1 arquivo selecionado
                 var rp = this.GetResizePaths(txtInputPath.Text);
 
                 var outFile = _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
-                foreach (var item in outFile)
-                {
-                    AddFileList(SavePackage(item).IsNull(item));
-                }
-                
+                AddFileList(SavePackage(outFile).IsNull(outFile));
             }
             else
             {
-                if (!chkFilterJPG.Checked && !chkFilterPNG.Checked && !chkFilterPDF.Checked)
+                if (!chkFilterJPG.Checked && !chkFilterPNG.Checked)
                 {
-                    MessageBox.Show("在继续之前，您必须选择文件类型！", "文件类型", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                    MessageBox.Show("Antes de continuar, é necessário selecionar um tipo de arquivo!", "Tipo de Arquivo", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     return;
                 }
 
@@ -245,7 +241,7 @@ namespace ResizeImages
                     lblFolderCount.Text = _countSubFolders.ToString();
                     lblFolderCount.Visible = _countSubFolders > 0;
 
-                    btnRun.Text = "取消";
+                    btnRun.Text = "Cancelar";
                     this.Refresh();
 
                     progBar.Value = 0;
@@ -273,11 +269,11 @@ namespace ResizeImages
                         CarregarImagens(txtInputPath.Text, _userOp.SeekImageExtensions, progress, token);
                     });
 
-                    btnRun.Text = "开始";
+                    btnRun.Text = "Começar";
                 }
                 catch (OperationCanceledException)
                 {
-                    btnRun.Text = "已取消（重新开始）";
+                    btnRun.Text = "Cancelado (Recomeçar)";
                 }
                 finally
                 {
@@ -385,12 +381,12 @@ namespace ResizeImages
         {
             if (string.IsNullOrEmpty(pathFiles))
             {
-                throw new ArgumentException($"'{nameof(pathFiles)}' 不能为 null 或为空。", nameof(pathFiles));
+                throw new ArgumentException($"'{nameof(pathFiles)}' não pode ser nulo nem vazio.", nameof(pathFiles));
             }
 
             if (string.IsNullOrEmpty(fileExtensions))
             {
-                throw new ArgumentException($"'{nameof(fileExtensions)}' 不能为 null 或为空。", nameof(fileExtensions));
+                throw new ArgumentException($"'{nameof(fileExtensions)}' não pode ser nulo nem vazio.", nameof(fileExtensions));
             }
 
             if (progress is null)
@@ -406,97 +402,45 @@ namespace ResizeImages
 
             //progBar.Maximum = files.Count();
             int xfile = 0;
-            if (Path.GetExtension(files.First()).ToLower() != ".pdf")
+            foreach (var file in files)
             {
-                foreach (var file in files)
-                {
-                    if (token.IsCancellationRequested)
-                        token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                    token.ThrowIfCancellationRequested();
 
-                    xfile++;
+                xfile++;
 
-                    var rp = this.GetResizePaths(file, output);
-                    _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
+                var rp = this.GetResizePaths(file, output);
+                _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
 
-                    var percent = (xfile * 100) / files.Count();
-                    progress.Report(percent);
-
-                }
-                //如果您没有调用进度报告
-                if (xfile == 0)
-                    _countSubFolders--;
-                else
-                {
-                    var pkg = SavePackage(output);
-                    if (!string.IsNullOrEmpty(pkg))
-                    {
-                        _outputFiles.Add(pkg);
-                    }
-                }
-
-
-                if (_userOp.递归查找)
-                    foreach (var sub in Directory.GetDirectories(pathFiles))
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            token.ThrowIfCancellationRequested();
-                        }
-
-                        if (!sub.Contains(@"\__output") && !sub.Contains(@"\__backup"))
-                            CarregarImagens(sub, fileExtensions, progress, token);
-
-                    }
+                var percent = (xfile * 100) / files.Count();
+                progress.Report(percent);
 
             }
+            //Se não chamou progress.Report
+            if (xfile == 0)
+                _countSubFolders--;
             else
             {
-                foreach (var file in files)
+                var pkg = SavePackage(output);
+                if (!string.IsNullOrEmpty(pkg))
+                {
+                    _outputFiles.Add(pkg);
+                }
+            }
+
+
+            if (_userOp.SeekRecursively)
+                foreach (var sub in Directory.GetDirectories(pathFiles))
                 {
                     if (token.IsCancellationRequested)
-                        token.ThrowIfCancellationRequested();
-
-                    xfile++;
-                    output = ReplaceOutputFolder(pathFiles);
-                    var rp = this.GetResizePaths(file, output);
-                    _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
-                    var pkg = SavePackage(output,file);
-                    if (!string.IsNullOrEmpty(pkg))
                     {
-                        _outputFiles.Add(pkg);
+                        token.ThrowIfCancellationRequested();
                     }
-                    var percent = (xfile * 100) / files.Count();
-                    progress.Report(percent);
+
+                    if (!sub.Contains(@"\__output") && !sub.Contains(@"\__backup"))
+                        CarregarImagens(sub, fileExtensions, progress, token);
 
                 }
-                //如果您没有调用进度报告
-                //if (xfile == 0)
-                //    _countSubFolders--;
-                //else
-                //{
-                //    var pkg = SavePackage(output);
-                //    if (!string.IsNullOrEmpty(pkg))
-                //    {
-                //        _outputFiles.Add(pkg);
-                //    }
-                //}
-
-
-                if (_userOp.递归查找)
-                    foreach (var sub in Directory.GetDirectories(pathFiles))
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            token.ThrowIfCancellationRequested();
-                        }
-
-                        if (!sub.Contains(@"\__output") && !sub.Contains(@"\__backup"))
-                            CarregarImagens(sub, fileExtensions, progress, token);
-
-                    }
-            }
-                
-            
 
         }
 
@@ -546,7 +490,7 @@ namespace ResizeImages
             // extensoes
             string extFile = chkFilterJPG.Checked ? chkFilterJPG.Tag.ToString() : string.Empty;
             extFile += chkFilterPNG.Checked ? (!extFile.Equals(string.Empty) ? ";" : "") + chkFilterPNG.Tag.ToString() : string.Empty;
-            extFile += chkFilterPDF.Checked ? (!extFile.Equals(string.Empty) ? ";" : "") + chkFilterPDF.Tag.ToString() : string.Empty;
+
             // diretorio output
             string dirOutput = "%DIR_ORIGEM%";
 
@@ -558,7 +502,7 @@ namespace ResizeImages
 
             _userOp = new UserOptions
             {
-                递归查找 = chkSeekRecursively.Checked,
+                SeekRecursively = chkSeekRecursively.Checked,
                 SeekImageExtensions = extFile,
                 InputFullPath = txtInputPath.Text,
                 OutputDirectory = dirOutput,
@@ -600,17 +544,17 @@ namespace ResizeImages
             btnRun.Enabled = runOK;
         }
 
-        private string SavePackage(string outPath,string pdfname=null)
+        private string SavePackage(string outPath)
         {
             if (_userOp.OutputType.Equals(GenerateImages.EOutputType.Cbz))
             {
                 GenPackageFile cbz = new();
-                return cbz.Save(outPath, GenPackageFile.ETypeFile.CbzFile,pdfname);
+                return cbz.Save(outPath, GenPackageFile.ETypeFile.CbzFile);
             }
             else if (_userOp.OutputType.Equals(GenerateImages.EOutputType.Pdf))
             {
                 GenPackageFile pdf = new();
-                return pdf.Save(outPath, GenPackageFile.ETypeFile.PdfFile,pdfname);
+                return pdf.Save(outPath, GenPackageFile.ETypeFile.PdfFile);
             }
 
             return null;
