@@ -406,34 +406,83 @@ namespace ResizeImages
 
             //progBar.Maximum = files.Count();
             int xfile = 0;
-            if (Path.GetExtension(files.First()).ToLower() != ".pdf")
-            {
-                foreach (var file in files)
+            //if(File.Exists())
+            if (files.Any())
+                if (Path.GetExtension(files.First()).ToLower() != ".pdf")
                 {
-                    if (token.IsCancellationRequested)
-                        token.ThrowIfCancellationRequested();
+                    foreach (var file in files)
+                    {
+                        if (token.IsCancellationRequested)
+                            token.ThrowIfCancellationRequested();
 
-                    xfile++;
+                        xfile++;
 
-                    var rp = this.GetResizePaths(file, output);
-                    _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
+                        var rp = this.GetResizePaths(file, output);
+                        _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
 
-                    var percent = (xfile * 100) / files.Count();
-                    progress.Report(percent);
+                        var percent = (xfile * 100) / files.Count();
+                        progress.Report(percent);
+
+                    }
+                    //如果您没有调用进度报告
+                    if (xfile == 0)
+                        _countSubFolders--;
+                    else
+                    {
+                        var pkg = SavePackage(output);
+                        if (!string.IsNullOrEmpty(pkg))
+                        {
+                            _outputFiles.Add(pkg);
+                        }
+                    }
+
+
+                    if (_userOp.递归查找)
+                        foreach (var sub in Directory.GetDirectories(pathFiles))
+                        {
+                            if (token.IsCancellationRequested)
+                            {
+                                token.ThrowIfCancellationRequested();
+                            }
+
+                            if (!sub.Contains(@"\__output") && !sub.Contains(@"\__backup"))
+                                CarregarImagens(sub, fileExtensions, progress, token);
+
+                        }
 
                 }
-                //如果您没有调用进度报告
-                if (xfile == 0)
-                    _countSubFolders--;
                 else
                 {
-                    var pkg = SavePackage(output);
-                    if (!string.IsNullOrEmpty(pkg))
+                    foreach (var file in files)
                     {
-                        _outputFiles.Add(pkg);
-                    }
-                }
+                        if (token.IsCancellationRequested)
+                            token.ThrowIfCancellationRequested();
 
+                        xfile++;
+                        output = ReplaceOutputFolder(pathFiles);
+                        var rp = this.GetResizePaths(file, output);
+                        _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
+                        var pkg = SavePackage(output, file);
+                        if (!string.IsNullOrEmpty(pkg))
+                        {
+                            _outputFiles.Add(pkg);
+                        }
+                        var percent = (xfile * 100) / files.Count();
+                        progress.Report(percent);
+
+                    }
+                    //如果您没有调用进度报告
+                    //if (xfile == 0)
+                    //    _countSubFolders--;
+                    //else
+                    //{
+                    //    var pkg = SavePackage(output);
+                    //    if (!string.IsNullOrEmpty(pkg))
+                    //    {
+                    //        _outputFiles.Add(pkg);
+                    //    }
+                    //}
+                }
 
                 if (_userOp.递归查找)
                     foreach (var sub in Directory.GetDirectories(pathFiles))
@@ -447,54 +496,7 @@ namespace ResizeImages
                             CarregarImagens(sub, fileExtensions, progress, token);
 
                     }
-
-            }
-            else
-            {
-                foreach (var file in files)
-                {
-                    if (token.IsCancellationRequested)
-                        token.ThrowIfCancellationRequested();
-
-                    xfile++;
-                    output = ReplaceOutputFolder(pathFiles);
-                    var rp = this.GetResizePaths(file, output);
-                    _generateImages.Save(rp.InputFile, _resizeScale, rp.PathOutput, rp.PathBackup);
-                    var pkg = SavePackage(output,file);
-                    if (!string.IsNullOrEmpty(pkg))
-                    {
-                        _outputFiles.Add(pkg);
-                    }
-                    var percent = (xfile * 100) / files.Count();
-                    progress.Report(percent);
-
-                }
-                //如果您没有调用进度报告
-                //if (xfile == 0)
-                //    _countSubFolders--;
-                //else
-                //{
-                //    var pkg = SavePackage(output);
-                //    if (!string.IsNullOrEmpty(pkg))
-                //    {
-                //        _outputFiles.Add(pkg);
-                //    }
-                //}
-
-
-                if (_userOp.递归查找)
-                    foreach (var sub in Directory.GetDirectories(pathFiles))
-                    {
-                        if (token.IsCancellationRequested)
-                        {
-                            token.ThrowIfCancellationRequested();
-                        }
-
-                        if (!sub.Contains(@"\__output") && !sub.Contains(@"\__backup"))
-                            CarregarImagens(sub, fileExtensions, progress, token);
-
-                    }
-            }
+            
                 
             
 
